@@ -5,13 +5,13 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { registerAuthHandlers } from '@/services/api/client';
+import { registerCourtlyAuthHandlers } from '@/services/api/courtly-client';
 import { queryClient } from '@/shared/lib/query-client';
 import { getStoredToken, useAuthStore } from '@/store/auth-store';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-registerAuthHandlers({
+registerCourtlyAuthHandlers({
   getToken: getStoredToken,
   onUnauthorized: () => {
     void useAuthStore.getState().signOut();
