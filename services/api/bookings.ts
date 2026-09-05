@@ -1,12 +1,17 @@
 import { courtly } from '@/services/api/courtly-client';
-import type { Booking, BookingsParam, CreateBookingPayload } from '@/services/api/types';
+import type {
+  Booking,
+  BookingsParam,
+  BookingsResponse,
+  CreateBookingPayload,
+} from '@/services/api/types';
 
 export function createBooking(payload: CreateBookingPayload): Promise<Booking> {
   return courtly.post<Booking>('/v1/bookings', payload, { auth: true });
 }
 
-export function getBookings(params?: BookingsParam): Promise<Booking[]> {
-  return courtly.get<Booking[]>('/v1/bookings', {
+export function getBookings(params?: BookingsParam): Promise<BookingsResponse> {
+  return courtly.get<BookingsResponse>('/v1/bookings', {
     query: { status: params?.status },
     auth: true,
   });
