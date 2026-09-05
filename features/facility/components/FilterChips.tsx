@@ -7,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { PressableScale } from '@/shared/components/PressableScale';
+import { SportIcon } from '@/shared/components/SportIcon';
 import { colors, motion, radius, spacing, typography } from '@/shared/constants/theme';
 
 interface FilterChipsProps {
@@ -34,6 +35,7 @@ export function FilterChips({ options, selected, onSelect, allLabel = 'All' }: F
           <Chip
             key={item.value}
             label={item.label}
+            sport={isAll ? undefined : item.value}
             active={active}
             onPress={() => onSelect(isAll || active ? undefined : item.value)}
           />
@@ -43,7 +45,17 @@ export function FilterChips({ options, selected, onSelect, allLabel = 'All' }: F
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Chip({
+  label,
+  sport,
+  active,
+  onPress,
+}: {
+  label: string;
+  sport?: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   const progress = useDerivedValue(
     () => withTiming(active ? 1 : 0, { duration: motion.duration.fast }),
     [active],
@@ -61,6 +73,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   return (
     <PressableScale onPress={onPress} scaleTo={0.94}>
       <Animated.View style={[styles.chip, containerStyle]}>
+        {sport ? <SportIcon sport={sport} size={14} color={active ? colors.onPrimary : colors.textMuted} /> : null}
         <Animated.Text style={[styles.chipLabel, textStyle]}>{label}</Animated.Text>
       </Animated.View>
     </PressableScale>
@@ -74,6 +87,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxs,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 1,
     borderRadius: radius.sm,

@@ -10,9 +10,11 @@ import { FacilityDetailSkeleton } from '@/features/facility/components/FacilityD
 import { useFacilityDetailQuery } from '@/features/facility/hooks/use-facility-query';
 import { Button } from '@/shared/components/Button';
 import { PressableScale } from '@/shared/components/PressableScale';
+import { SportIcon } from '@/shared/components/SportIcon';
 import { colors, radius, shadows, spacing, typography } from '@/shared/constants/theme';
 import { formatCurrency } from '@/shared/utils/format';
 import { getErrorMessage } from '@/shared/utils/error';
+import { getAmenityIcon } from '@/shared/utils/facility-icons';
 import type { FacilityCourtSummary } from '@/services/api/types';
 
 export default function FacilityDetailScreen() {
@@ -92,6 +94,7 @@ export default function FacilityDetailScreen() {
               <View style={styles.chipRow}>
                 {facility.sports.map((sport) => (
                   <View key={sport} style={styles.sportChip}>
+                    <SportIcon sport={sport} size={14} color={colors.primary} />
                     <Text style={styles.sportChipText}>{sport}</Text>
                   </View>
                 ))}
@@ -105,7 +108,7 @@ export default function FacilityDetailScreen() {
                 <View style={styles.chipRow}>
                   {facility.amenities.map((amenity) => (
                     <View key={amenity} style={styles.amenityChip}>
-                      <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                      <Ionicons name={getAmenityIcon(amenity)} size={14} color={colors.success} />
                       <Text style={styles.amenityChipText}>{amenity}</Text>
                     </View>
                   ))}
@@ -153,13 +156,20 @@ function CourtRow({ court, index }: { court: FacilityCourtSummary; index: number
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(300)} style={styles.courtRow}>
       <View style={styles.courtIcon}>
-        <Ionicons name={court.indoor ? 'home-outline' : 'sunny-outline'} size={18} color={colors.primary} />
+        <SportIcon sport={court.sport} size={18} color={colors.primary} />
       </View>
       <View style={styles.courtInfo}>
         <Text style={styles.courtName}>{court.name}</Text>
-        <Text style={styles.courtMeta}>
-          {court.sport.charAt(0).toUpperCase() + court.sport.slice(1)} · {court.indoor ? 'Indoor' : 'Outdoor'}
-        </Text>
+        <View style={styles.courtMetaRow}>
+          <Ionicons
+            name={court.indoor ? 'home-outline' : 'sunny-outline'}
+            size={12}
+            color={colors.textMuted}
+          />
+          <Text style={styles.courtMeta}>
+            {court.sport.charAt(0).toUpperCase() + court.sport.slice(1)} · {court.indoor ? 'Indoor' : 'Outdoor'}
+          </Text>
+        </View>
       </View>
       <Text style={styles.courtPrice}>{formatCurrency(court.basePrice)}</Text>
     </Animated.View>
@@ -240,6 +250,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   sportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: colors.primarySoft,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -302,6 +315,11 @@ const styles = StyleSheet.create({
   courtName: {
     ...typography.bodyMedium,
     color: colors.text,
+  },
+  courtMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   courtMeta: {
     ...typography.caption,

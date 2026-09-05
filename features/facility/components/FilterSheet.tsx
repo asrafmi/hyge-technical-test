@@ -6,6 +6,7 @@ import { BottomSheet } from '@/shared/components/BottomSheet';
 import { Button } from '@/shared/components/Button';
 import { PressableScale } from '@/shared/components/PressableScale';
 import { Slider } from '@/shared/components/Slider';
+import { SportIcon } from '@/shared/components/SportIcon';
 import { colors, radius, spacing, typography } from '@/shared/constants/theme';
 import { formatCompactCurrency } from '@/shared/utils/format';
 
@@ -82,6 +83,7 @@ export function FilterSheet({
           <Pill
             key={sport.value}
             label={sport.label}
+            sport={sport.value}
             active={draft.sport === sport.value}
             onPress={() => setDraft((prev) => ({ ...prev, sport: sport.value }))}
           />
@@ -129,13 +131,26 @@ export function FilterSheet({
   );
 }
 
-function Pill({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Pill({
+  label,
+  sport,
+  active,
+  onPress,
+}: {
+  label: string;
+  sport?: string;
+  active: boolean;
+  onPress: () => void;
+}) {
   return (
     <PressableScale
       onPress={onPress}
       scaleTo={0.94}
-      style={[styles.pill, active && styles.pillActive]}
+      style={[styles.pill, styles.pillContent, active && styles.pillActive]}
     >
+      {sport ? (
+        <SportIcon sport={sport} size={14} color={active ? colors.onPrimary : colors.textMuted} />
+      ) : null}
       <Text style={[styles.pillLabel, active && styles.pillLabelActive]}>{label}</Text>
     </PressableScale>
   );
@@ -175,6 +190,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.background,
+  },
+  pillContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   pillActive: {
     backgroundColor: colors.primary,
