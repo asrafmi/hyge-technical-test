@@ -7,6 +7,7 @@ export default function AppLayout() {
       <Stack.Screen name="profile" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="account-details" options={{ presentation: 'card', animation: 'slide_from_right' }} />
       <Stack.Screen name="facility/[id]" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+      <Stack.Screen name="facility/[id]/book" options={{ presentation: 'card', animation: 'slide_from_right' }} />
     </Stack>
   );
 }

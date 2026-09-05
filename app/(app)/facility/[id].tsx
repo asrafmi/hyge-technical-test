@@ -135,7 +135,11 @@ export default function FacilityDetailScreen() {
                 {startingPrice !== undefined ? formatCurrency(startingPrice) : '-'}
               </Text>
             </View>
-            <Button label="Coming soon" onPress={() => {}} disabled style={styles.footerButton} />
+            <Button
+              label="Book now"
+              onPress={() => router.push(`/(app)/facility/${facility.id}/book`)}
+              style={styles.footerButton}
+            />
           </Animated.View>
         </>
       )}

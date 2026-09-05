@@ -1,5 +1,6 @@
 import { courtly } from '@/services/api/courtly-client';
 import type {
+  AvailabilityResponse,
   CitiesResponse,
   FacilitiesResponse,
   FacilityDetail,
@@ -20,6 +21,12 @@ export function getAllFacilities(params?: FacilityParam): Promise<FacilitiesResp
 
 export function getFacilityById(facilityId: string): Promise<FacilityDetail> {
   return courtly.get<FacilityDetail>(`/v1/facilities/${facilityId}`);
+}
+
+export function getFacilityAvailability(facilityId: string, date: string): Promise<AvailabilityResponse> {
+  return courtly.get<AvailabilityResponse>(`/v1/facilities/${facilityId}/availability`, {
+    query: { date },
+  });
 }
 
 export function getSports(): Promise<SportsResponse> {
