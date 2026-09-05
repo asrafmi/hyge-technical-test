@@ -65,3 +65,27 @@ export interface SportsResponse {
 export interface CitiesResponse {
   data: string[];
 }
+
+export type CourtType = 'STANDARD' | 'PANORAMIC' | 'VIP' | 'INDOOR' | 'OUTDOOR';
+
+export interface FacilityCourtSummary {
+  id: string;
+  name: string;
+  type: CourtType;
+  indoor: boolean;
+  basePrice: number;
+  sport: string;
+}
+
+export interface FacilityDetail {
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  rating: number;
+  reviewCount: number;
+  imageUrl: string;
+  sports: string[];
+  amenities: string[];
+  courts: FacilityCourtSummary[];
+}

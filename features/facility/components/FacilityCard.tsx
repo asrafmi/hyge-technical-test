@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { PressableScale } from '@/shared/components/PressableScale';
+import { SportIcon } from '@/shared/components/SportIcon';
 import type { Facility } from '@/services/api/types';
 import { colors, radius, shadows, spacing, typography } from '@/shared/constants/theme';
 import { formatCompactCurrency } from '@/shared/utils/format';
@@ -47,6 +48,7 @@ export function FacilityCard({ facility, index = 0, onPress }: FacilityCardProps
           <View style={styles.sportsRow}>
             {facility.sports.map((sport) => (
               <View key={sport} style={styles.sportChip}>
+                <SportIcon sport={sport} size={12} color={colors.text} />
                 <Text style={styles.sportChipText}>{sport}</Text>
               </View>
             ))}
@@ -129,6 +131,9 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   sportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: 'rgba(255,255,255,0.92)',
     paddingHorizontal: spacing.xs,
     paddingVertical: 4,

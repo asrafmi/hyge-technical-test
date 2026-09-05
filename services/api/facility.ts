@@ -2,6 +2,7 @@ import { courtly } from '@/services/api/courtly-client';
 import type {
   CitiesResponse,
   FacilitiesResponse,
+  FacilityDetail,
   FacilityParam,
   SportsResponse,
 } from '@/services/api/types';
@@ -15,6 +16,10 @@ export function getAllFacilities(params?: FacilityParam): Promise<FacilitiesResp
       limit: params?.limit,
     },
   });
+}
+
+export function getFacilityById(facilityId: string): Promise<FacilityDetail> {
+  return courtly.get<FacilityDetail>(`/v1/facilities/${facilityId}`);
 }
 
 export function getSports(): Promise<SportsResponse> {

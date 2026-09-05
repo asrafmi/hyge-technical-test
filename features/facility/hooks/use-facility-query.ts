@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { getAllFacilities, getCities, getSports } from '@/services/api/facility';
+import { getAllFacilities, getCities, getFacilityById, getSports } from '@/services/api/facility';
 import type { FacilityParam } from '@/services/api/types';
 
 export function useFacilitiesQuery(params?: FacilityParam) {
@@ -31,5 +31,13 @@ export function useCitiesQuery() {
     queryKey: ['cities'],
     queryFn: getCities,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useFacilityDetailQuery(facilityId: string) {
+  return useQuery({
+    queryKey: ['facilities', facilityId],
+    queryFn: () => getFacilityById(facilityId),
+    enabled: Boolean(facilityId),
   });
 }

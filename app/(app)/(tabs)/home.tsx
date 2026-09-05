@@ -65,7 +65,13 @@ export default function HomeScreen() {
         onRefresh={refetch}
         refreshing={isRefetching && !isLoading}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 110 }]}
-        renderItem={({ item, index }) => <FacilityCard facility={item} index={index} />}
+        renderItem={({ item, index }) => (
+          <FacilityCard
+            facility={item}
+            index={index}
+            onPress={() => router.push(`/(app)/facility/${item.id}`)}
+          />
+        )}
         ListHeaderComponent={
           <Animated.View entering={FadeIn.duration(300)} style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
             <View style={styles.greetingRow}>
