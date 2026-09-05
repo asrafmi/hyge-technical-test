@@ -10,6 +10,14 @@ export function useFacilitiesQuery(params?: FacilityParam) {
   });
 }
 
+export function useAllFacilitiesQuery() {
+  return useQuery({
+    queryKey: ['facilities', 'all'],
+    queryFn: () => getAllFacilities({ limit: 50 }),
+    staleTime: 60_000,
+  });
+}
+
 export function useSportsQuery() {
   return useQuery({
     queryKey: ['sports'],

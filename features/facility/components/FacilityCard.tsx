@@ -45,7 +45,7 @@ export function FacilityCard({ facility, index = 0, onPress }: FacilityCardProps
             <Text style={styles.ratingCount}>({facility.reviewCount})</Text>
           </View>
           <View style={styles.sportsRow}>
-            {facility.sports.slice(0, 3).map((sport) => (
+            {facility.sports.map((sport) => (
               <View key={sport} style={styles.sportChip}>
                 <Text style={styles.sportChipText}>{sport}</Text>
               </View>

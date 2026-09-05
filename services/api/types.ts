@@ -49,6 +49,7 @@ export interface FacilityParam {
   search?: string;
   sport?: string;
   city?: string;
+  limit?: number;
 }
 
 export interface SportOption {

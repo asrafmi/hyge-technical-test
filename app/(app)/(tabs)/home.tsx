@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,36 +8,53 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FacilityCard } from '@/features/facility/components/FacilityCard';
 import { FacilityCardSkeleton } from '@/features/facility/components/FacilityCardSkeleton';
 import { FilterChips } from '@/features/facility/components/FilterChips';
+import { FilterSheet, type FacilityFilters } from '@/features/facility/components/FilterSheet';
 import {
+  useAllFacilitiesQuery,
   useCitiesQuery,
   useFacilitiesQuery,
   useSportsQuery,
 } from '@/features/facility/hooks/use-facility-query';
 import { PressableScale } from '@/shared/components/PressableScale';
-import { colors, radius, spacing, typography } from '@/shared/constants/theme';
+import { colors, radius, shadows, spacing, typography } from '@/shared/constants/theme';
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value';
 import { getErrorMessage } from '@/shared/utils/error';
 import { useAuthStore } from '@/store/auth-store';
+
+const PRICE_RANGE = { min: 0, max: 200_000, step: 10_000 };
 
 export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets();
 
   const [search, setSearch] = useState('');
-  const [sport, setSport] = useState<string>();
-  const [city, setCity] = useState<string>();
+  const [filters, setFilters] = useState<FacilityFilters>({
+    sport: undefined,
+    city: undefined,
+    maxPrice: PRICE_RANGE.max,
+  });
+  const [sheetVisible, setSheetVisible] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
 
   const { data: sportsData } = useSportsQuery();
   const { data: citiesData } = useCitiesQuery();
+  const { data: allFacilitiesData } = useAllFacilitiesQuery();
   const { data, isLoading, isError, error, refetch, isRefetching } = useFacilitiesQuery({
     search: debouncedSearch || undefined,
-    sport,
-    city,
+    sport: filters.sport,
+    city: filters.city,
   });
 
-  const facilities = data?.data ?? [];
+  const allFacilities = data?.data ?? [];
+  const facilities = useMemo(
+    () => allFacilities.filter((item) => item.startingPrice <= filters.maxPrice),
+    [allFacilities, filters.maxPrice],
+  );
   const firstName = user?.name?.split(' ')[0] ?? 'there';
+
+  const sportOptions = (sportsData?.data ?? []).map((item) => ({ value: item.slug, label: item.name }));
+  const cityOptions = (citiesData?.data ?? []).map((item) => ({ value: item, label: item }));
+  const isFilterActive = Boolean(filters.sport) || Boolean(filters.city) || filters.maxPrice < PRICE_RANGE.max;
 
   return (
     <View style={styles.container}>
@@ -48,9 +65,7 @@ export default function HomeScreen() {
         onRefresh={refetch}
         refreshing={isRefetching && !isLoading}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 110 }]}
-        renderItem={({ item, index }) => (
-          <FacilityCard facility={item} index={index} />
-        )}
+        renderItem={({ item, index }) => <FacilityCard facility={item} index={index} />}
         ListHeaderComponent={
           <Animated.View entering={FadeIn.duration(300)} style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
             <View style={styles.greetingRow}>
@@ -66,37 +81,40 @@ export default function HomeScreen() {
               </PressableScale>
             </View>
 
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={19} color={colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search venues or sports"
-                placeholderTextColor={colors.textFaint}
-                value={search}
-                onChangeText={setSearch}
-                returnKeyType="search"
-              />
-              {search.length > 0 ? (
-                <PressableScale onPress={() => setSearch('')} scaleTo={0.85} haptic="none">
-                  <Ionicons name="close-circle" size={19} color={colors.textFaint} />
-                </PressableScale>
-              ) : null}
+            <View style={styles.searchRow}>
+              <View style={styles.searchBar}>
+                <Ionicons name="search" size={19} color={colors.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search facilities or areas"
+                  placeholderTextColor={colors.textFaint}
+                  value={search}
+                  onChangeText={setSearch}
+                  returnKeyType="search"
+                />
+                {search.length > 0 ? (
+                  <PressableScale onPress={() => setSearch('')} scaleTo={0.85} haptic="none">
+                    <Ionicons name="close-circle" size={19} color={colors.textFaint} />
+                  </PressableScale>
+                ) : null}
+              </View>
+
+              <PressableScale
+                style={[styles.filterButton, shadows.primary]}
+                onPress={() => setSheetVisible(true)}
+                haptic="medium"
+              >
+                <Ionicons name="options-outline" size={20} color={colors.onPrimary} />
+                {isFilterActive ? <View style={styles.filterDot} /> : null}
+              </PressableScale>
             </View>
 
-            <View style={styles.filters}>
-              <FilterChips
-                options={(sportsData?.data ?? []).map((item) => ({ value: item.slug, label: item.name }))}
-                selected={sport}
-                onSelect={setSport}
-                allLabel="All sports"
-              />
-              <FilterChips
-                options={(citiesData?.data ?? []).map((item) => ({ value: item, label: item }))}
-                selected={city}
-                onSelect={setCity}
-                allLabel="All cities"
-              />
-            </View>
+            <FilterChips
+              options={sportOptions}
+              selected={filters.sport}
+              onSelect={(sport) => setFilters((prev) => ({ ...prev, sport }))}
+              allLabel="All sports"
+            />
           </Animated.View>
         }
         ListEmptyComponent={
@@ -114,6 +132,17 @@ export default function HomeScreen() {
             />
           )
         }
+      />
+
+      <FilterSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        sports={sportOptions}
+        cities={cityOptions}
+        priceRange={PRICE_RANGE}
+        filters={filters}
+        onApply={setFilters}
+        allFacilities={allFacilitiesData?.data ?? []}
       />
     </View>
   );
@@ -191,7 +220,13 @@ const styles = StyleSheet.create({
     ...typography.subheading,
     color: colors.primary,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -205,9 +240,22 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text,
   },
-  filters: {
-    gap: spacing.xxs,
-    marginHorizontal: -spacing.xl,
+  filterButton: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.background,
   },
   skeletonList: {
     gap: spacing.md,

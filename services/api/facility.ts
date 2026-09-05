@@ -12,6 +12,7 @@ export function getAllFacilities(params?: FacilityParam): Promise<FacilitiesResp
       search: params?.search,
       sport: params?.sport,
       city: params?.city,
+      limit: params?.limit,
     },
   });
 }
