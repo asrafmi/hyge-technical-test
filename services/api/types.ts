@@ -144,6 +144,23 @@ export interface Booking {
   totalPrice: number;
 }
 
+export interface BookingSummary {
+  id: string;
+  bookingReference: string;
+  status: BookingStatus;
+  facility: BookingFacilitySummary;
+  court: BookingCourtSummary;
+  date: string;
+  startTime: string;
+  endTime: string;
+  totalPrice: number;
+}
+
+export interface BookingsResponse {
+  data: BookingSummary[];
+  pagination: PaginationMeta;
+}
+
 export interface BookingsParam {
   status?: 'UPCOMING' | 'PAST' | 'CANCELLED';
 }
