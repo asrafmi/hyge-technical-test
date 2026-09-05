@@ -136,9 +136,11 @@ export default function OnboardingScreen() {
 
       <View style={[styles.topBar, { top: insets.top + spacing.md }]}>
         <View style={styles.brand}>
-          <View style={styles.brandMark}>
-            <Ionicons name="tennisball" size={16} color={colors.onPrimary} />
-          </View>
+          <Image
+            source={require('@/assets/courtly-logo.jpeg')}
+            style={styles.brandMark}
+            contentFit="contain"
+          />
           <Text style={styles.brandName}>Courtly</Text>
         </View>
       </View>
@@ -224,9 +226,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: radius.xs,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.background,
   },
   brandName: {
     ...typography.subheading,

@@ -1,5 +1,6 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Image } from 'expo-image';
 import { Link, router } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -39,9 +40,11 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeIn.duration(300)} style={styles.brand}>
-          <View style={styles.brandMark}>
-            <Ionicons name="tennisball" size={22} color={colors.onPrimary} />
-          </View>
+          <Image
+            source={require('@/assets/courtly-logo.jpeg')}
+            style={styles.brandMark}
+            contentFit="contain"
+          />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(80).duration(350)} style={styles.heading}>
@@ -121,10 +124,6 @@ const styles = StyleSheet.create({
   brandMark: {
     width: 52,
     height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   heading: {
     gap: spacing.xxs,
