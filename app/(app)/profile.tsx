@@ -33,9 +33,11 @@ export default function ProfileScreen() {
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(160).duration(350)} style={styles.menu}>
-        <MenuRow icon="person-outline" label="Account details" />
-        <MenuRow icon="notifications-outline" label="Notifications" />
-        <MenuRow icon="help-circle-outline" label="Help & support" />
+        <MenuRow
+          icon="person-outline"
+          label="Account details"
+          onPress={() => router.push('/(app)/account-details')}
+        />
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(240).duration(350)} style={styles.footer}>
@@ -45,9 +47,17 @@ export default function ProfileScreen() {
   );
 }
 
-function MenuRow({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+function MenuRow({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <PressableScale style={styles.menuRow} scaleTo={0.985} onPress={() => {}}>
+    <PressableScale style={styles.menuRow} scaleTo={0.985} onPress={onPress}>
       <View style={styles.menuIcon}>
         <Ionicons name={icon} size={19} color={colors.primary} />
       </View>

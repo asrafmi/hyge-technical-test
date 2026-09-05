@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   runOnJS,
@@ -66,7 +66,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={close} statusBarTranslucent>
-      <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={close} />
         </Animated.View>
@@ -84,7 +84,7 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
             {children}
           </Animated.View>
         </GestureDetector>
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }
