@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -23,10 +23,15 @@ export function Slider({ min, max, step = 1, value, onChange }: SliderProps) {
   const [trackWidth, setTrackWidth] = useState(0);
   const startX = useSharedValue(0);
   const translateX = useSharedValue(0);
+  const isDragging = useSharedValue(false);
 
   const usableWidth = Math.max(trackWidth - THUMB_SIZE, 1);
-  const ratio = max > min ? (value - min) / (max - min) : 0;
-  translateX.value = ratio * usableWidth;
+
+  useEffect(() => {
+    if (isDragging.value) return;
+    const ratio = max > min ? (value - min) / (max - min) : 0;
+    translateX.value = ratio * usableWidth;
+  }, [value, min, max, usableWidth, translateX, isDragging]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     setTrackWidth(event.nativeEvent.layout.width);
@@ -45,6 +50,7 @@ export function Slider({ min, max, step = 1, value, onChange }: SliderProps) {
 
   const pan = Gesture.Pan()
     .onStart(() => {
+      isDragging.value = true;
       startX.value = translateX.value;
     })
     .onChange((event) => {
@@ -52,6 +58,7 @@ export function Slider({ min, max, step = 1, value, onChange }: SliderProps) {
       translateX.value = next;
     })
     .onEnd(() => {
+      isDragging.value = false;
       runOnJS(commitValue)(translateX.value);
     });
 
