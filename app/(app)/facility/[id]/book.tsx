@@ -9,7 +9,7 @@ import { BookingConfirmSheet } from '@/features/bookings/components/BookingConfi
 import { CourtSelector } from '@/features/bookings/components/CourtSelector';
 import { DateStrip } from '@/features/bookings/components/DateStrip';
 import { SlotGrid } from '@/features/bookings/components/SlotGrid';
-import { useCreateBookingMutation } from '@/features/bookings/hooks/use-booking-mutation';
+import { useCreateBookingsBatchMutation } from '@/features/bookings/hooks/use-booking-mutation';
 import {
   useFacilityAvailabilityQuery,
   useFacilityDetailQuery,
@@ -27,7 +27,7 @@ export default function BookFacilityScreen() {
 
   const [selectedDate, setSelectedDate] = useState(() => formatDateParam(new Date()));
   const [selectedCourtId, setSelectedCourtId] = useState<string>();
-  const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot>();
+  const [selectedSlots, setSelectedSlots] = useState<AvailabilitySlot[]>([]);
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const { data: facility } = useFacilityDetailQuery(id);
@@ -39,7 +39,8 @@ export default function BookFacilityScreen() {
     refetch,
   } = useFacilityAvailabilityQuery(id, selectedDate);
 
-  const createBooking = useCreateBookingMutation();
+  const [submitError, setSubmitError] = useState<string>();
+  const createBookings = useCreateBookingsBatchMutation();
 
   const sportByCourtId = useMemo(() => {
     const map: Record<string, string> = {};
@@ -53,34 +54,64 @@ export default function BookFacilityScreen() {
   const activeCourtId = selectedCourtId ?? courts[0]?.id;
   const activeCourt = courts.find((court) => court.id === activeCourtId);
 
+  const orderedSelectedSlots = useMemo(
+    () => [...selectedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [selectedSlots],
+  );
+  const totalPrice = orderedSelectedSlots.reduce((sum, slot) => sum + slot.price, 0);
+
   const handleSelectCourt = (courtId: string) => {
     setSelectedCourtId(courtId);
-    setSelectedSlot(undefined);
+    setSelectedSlots([]);
   };
 
   const handleSelectDate = (date: string) => {
     setSelectedDate(date);
-    setSelectedSlot(undefined);
+    setSelectedSlots([]);
   };
 
-  const handleSelectSlot = (slot: AvailabilitySlot) => {
-    setSelectedSlot(slot);
+  const handleToggleSlot = (slot: AvailabilitySlot) => {
+    setSelectedSlots((prev) => {
+      const exists = prev.some((item) => item.startTime === slot.startTime);
+      if (exists) {
+        return prev.filter((item) => item.startTime !== slot.startTime);
+      }
+      return [...prev, slot];
+    });
   };
 
   const handleConfirm = () => {
-    if (!activeCourt || !selectedSlot) return;
+    if (!activeCourt || orderedSelectedSlots.length === 0) return;
+    setSubmitError(undefined);
 
-    createBooking.mutate(
+    createBookings.mutate(
       {
-        courtId: activeCourt.id,
-        date: selectedDate,
-        startTime: selectedSlot.startTime,
-        endTime: selectedSlot.endTime,
+        facilityId: id,
+        payloads: orderedSelectedSlots.map((slot) => ({
+          courtId: activeCourt.id,
+          date: selectedDate,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
       },
       {
-        onSuccess: () => {
-          setSheetVisible(false);
-          router.replace('/(app)/(tabs)/bookings');
+        onSuccess: (result) => {
+          if (result.failed.length === 0) {
+            setSheetVisible(false);
+            router.replace('/(app)/(tabs)/bookings');
+            return;
+          }
+
+          const bookedTimes = result.succeeded.map((slot) => slot.startTime).join(', ');
+          const failedTimes = result.failed.map((item) => item.slot.startTime).join(', ');
+          setSubmitError(
+            result.succeeded.length > 0
+              ? `Booked ${bookedTimes}. Failed to book ${failedTimes}: ${result.failed[0].message}`
+              : `Failed to book ${failedTimes}: ${result.failed[0].message}`,
+          );
+          setSelectedSlots((prev) =>
+            prev.filter((slot) => result.failed.some((item) => item.slot.startTime === slot.startTime)),
+          );
         },
       },
     );
@@ -147,11 +178,18 @@ export default function BookFacilityScreen() {
                 entering={FadeInDown.delay(100).duration(300)}
                 style={[styles.section, styles.body]}
               >
-                <Text style={styles.sectionTitle}>Select time</Text>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={[styles.sectionTitle, styles.sectionTitleNoPadding]}>Select time</Text>
+                  <Text style={styles.sectionHint}>
+                    {selectedSlots.length > 0
+                      ? `${selectedSlots.length} hour${selectedSlots.length > 1 ? 's' : ''} selected`
+                      : 'Tap to select one or more hours'}
+                  </Text>
+                </View>
                 <SlotGrid
                   slots={activeCourt.slots}
-                  selectedStartTime={selectedSlot?.startTime}
-                  onSelect={handleSelectSlot}
+                  selectedSlots={selectedSlots}
+                  onToggle={handleToggleSlot}
                 />
               </Animated.View>
             ) : null}
@@ -164,17 +202,21 @@ export default function BookFacilityScreen() {
         style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}
       >
         <View style={styles.footerPrice}>
-          <Text style={styles.footerPriceLabel}>{selectedSlot ? selectedSlot.startTime : 'price'}</Text>
+          <Text style={styles.footerPriceLabel}>
+            {selectedSlots.length > 0
+              ? `${selectedSlots.length} hour${selectedSlots.length > 1 ? 's' : ''}`
+              : 'price'}
+          </Text>
           <Text style={styles.footerPriceValue}>
-            {selectedSlot ? formatCompactCurrency(selectedSlot.price) : '-'}
+            {selectedSlots.length > 0 ? formatCompactCurrency(totalPrice) : '-'}
           </Text>
         </View>
         <PressableScale
           style={[
             styles.bookButton,
-            (!selectedSlot || createBooking.isPending) && styles.bookButtonDisabled,
+            (selectedSlots.length === 0 || createBookings.isPending) && styles.bookButtonDisabled,
           ]}
-          disabled={!selectedSlot || createBooking.isPending}
+          disabled={selectedSlots.length === 0 || createBookings.isPending}
           haptic="medium"
           onPress={() => setSheetVisible(true)}
         >
@@ -182,19 +224,17 @@ export default function BookFacilityScreen() {
         </PressableScale>
       </Animated.View>
 
-      {activeCourt && selectedSlot && facility ? (
+      {activeCourt && orderedSelectedSlots.length > 0 && facility ? (
         <BookingConfirmSheet
           visible={sheetVisible}
           onClose={() => setSheetVisible(false)}
           onConfirm={handleConfirm}
-          submitting={createBooking.isPending}
-          errorMessage={createBooking.isError ? getErrorMessage(createBooking.error) : undefined}
+          submitting={createBookings.isPending}
+          errorMessage={submitError}
           facilityName={facility.name}
           courtName={activeCourt.name}
           date={selectedDate}
-          startTime={selectedSlot.startTime}
-          endTime={selectedSlot.endTime}
-          price={selectedSlot.price}
+          slots={orderedSelectedSlots}
         />
       ) : null}
     </View>
@@ -236,6 +276,19 @@ const styles = StyleSheet.create({
     ...typography.heading,
     color: colors.text,
     paddingHorizontal: spacing.xl,
+  },
+  sectionTitleNoPadding: {
+    paddingHorizontal: 0,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+  },
+  sectionHint: {
+    ...typography.tiny,
+    color: colors.textFaint,
   },
   body: {
     paddingHorizontal: spacing.xl,

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressableScale } from '@/shared/components/PressableScale';
@@ -7,22 +8,22 @@ import type { AvailabilitySlot } from '@/services/api/types';
 
 interface SlotGridProps {
   slots: AvailabilitySlot[];
-  selectedStartTime: string | undefined;
-  onSelect: (slot: AvailabilitySlot) => void;
+  selectedSlots: AvailabilitySlot[];
+  onToggle: (slot: AvailabilitySlot) => void;
 }
 
-export function SlotGrid({ slots, selectedStartTime, onSelect }: SlotGridProps) {
+export function SlotGrid({ slots, selectedSlots, onToggle }: SlotGridProps) {
   return (
     <View style={styles.grid}>
       {slots.map((slot) => {
-        const active = slot.startTime === selectedStartTime;
+        const active = selectedSlots.some((item) => item.startTime === slot.startTime);
         const disabled = !slot.available;
 
         return (
           <PressableScale
             key={slot.startTime}
             disabled={disabled}
-            onPress={() => onSelect(slot)}
+            onPress={() => onToggle(slot)}
             scaleTo={0.95}
             style={[
               styles.slot,
@@ -30,11 +31,14 @@ export function SlotGrid({ slots, selectedStartTime, onSelect }: SlotGridProps) 
               disabled && styles.slotDisabled,
             ]}
           >
+            <View style={styles.checkbox}>
+              {active ? <Ionicons name="checkmark" size={12} color={colors.onPrimary} /> : null}
+            </View>
             <Text style={[styles.time, active && styles.timeActive, disabled && styles.timeDisabled]}>
               {slot.startTime}
             </Text>
             <Text style={[styles.price, active && styles.priceActive, disabled && styles.timeDisabled]}>
-              {disabled ? 'Booked' : formatCompactCurrency(slot.price)}
+              {!slot.available ? 'Booked' : formatCompactCurrency(slot.price)}
             </Text>
           </PressableScale>
         );
@@ -66,6 +70,18 @@ const styles = StyleSheet.create({
   slotDisabled: {
     backgroundColor: colors.surfaceAlt,
     borderColor: colors.border,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   time: {
     ...typography.label,

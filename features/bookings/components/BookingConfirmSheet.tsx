@@ -6,6 +6,12 @@ import { Button } from '@/shared/components/Button';
 import { colors, radius, spacing, typography } from '@/shared/constants/theme';
 import { formatCurrency, formatDateHeading } from '@/shared/utils/format';
 
+interface ConfirmSlot {
+  startTime: string;
+  endTime: string;
+  price: number;
+}
+
 interface BookingConfirmSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -15,9 +21,7 @@ interface BookingConfirmSheetProps {
   facilityName: string;
   courtName: string;
   date: string;
-  startTime: string;
-  endTime: string;
-  price: number;
+  slots: ConfirmSlot[];
 }
 
 export function BookingConfirmSheet({
@@ -29,10 +33,10 @@ export function BookingConfirmSheet({
   facilityName,
   courtName,
   date,
-  startTime,
-  endTime,
-  price,
+  slots,
 }: BookingConfirmSheetProps) {
+  const totalPrice = slots.reduce((sum, slot) => sum + slot.price, 0);
+
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <Text style={styles.title}>Confirm booking</Text>
@@ -41,12 +45,23 @@ export function BookingConfirmSheet({
         <SummaryRow icon="business-outline" label={facilityName} />
         <SummaryRow icon="grid-outline" label={courtName} />
         <SummaryRow icon="calendar-outline" label={formatDateHeading(new Date(`${date}T00:00:00`))} />
-        <SummaryRow icon="time-outline" label={`${startTime} - ${endTime}`} />
+      </View>
+
+      <View style={styles.slotList}>
+        {slots.map((slot) => (
+          <View key={slot.startTime} style={styles.slotRow}>
+            <Ionicons name="time-outline" size={15} color={colors.textMuted} />
+            <Text style={styles.slotTime}>
+              {slot.startTime} - {slot.endTime}
+            </Text>
+            <Text style={styles.slotPrice}>{formatCurrency(slot.price)}</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Total</Text>
-        <Text style={styles.priceValue}>{formatCurrency(price)}</Text>
+        <Text style={styles.priceLabel}>Total ({slots.length} hour{slots.length > 1 ? 's' : ''})</Text>
+        <Text style={styles.priceValue}>{formatCurrency(totalPrice)}</Text>
       </View>
 
       {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
@@ -95,11 +110,35 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
+  slotList: {
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+  },
+  slotTime: {
+    ...typography.label,
+    color: colors.text,
+    flex: 1,
+  },
+  slotPrice: {
+    ...typography.label,
+    color: colors.primary,
+  },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   priceLabel: {
     ...typography.subheading,
