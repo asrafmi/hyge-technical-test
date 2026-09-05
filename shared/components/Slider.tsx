@@ -62,6 +62,14 @@ export function Slider({ min, max, step = 1, value, onChange }: SliderProps) {
       runOnJS(commitValue)(translateX.value);
     });
 
+  const tap = Gesture.Tap().onEnd((event) => {
+    const next = Math.min(Math.max(event.x - THUMB_SIZE / 2, 0), usableWidth);
+    translateX.value = next;
+    runOnJS(commitValue)(next);
+  });
+
+  const trackGesture = Gesture.Exclusive(pan, tap);
+
   const thumbStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
@@ -71,17 +79,22 @@ export function Slider({ min, max, step = 1, value, onChange }: SliderProps) {
   }));
 
   return (
-    <View style={styles.track} onLayout={handleLayout}>
-      <View style={styles.trackBackground} />
-      <Animated.View style={[styles.trackFill, fillStyle]} />
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.thumb, thumbStyle]} />
-      </GestureDetector>
-    </View>
+    <GestureDetector gesture={trackGesture}>
+      <View style={styles.hitArea} onLayout={handleLayout}>
+        <View style={styles.track}>
+          <View style={styles.trackBackground} />
+          <Animated.View style={[styles.trackFill, fillStyle]} />
+          <Animated.View style={[styles.thumb, thumbStyle]} />
+        </View>
+      </View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
+  hitArea: {
+    paddingVertical: 16,
+  },
   track: {
     height: THUMB_SIZE,
     justifyContent: 'center',
