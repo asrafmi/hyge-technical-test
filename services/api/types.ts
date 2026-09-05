@@ -89,3 +89,61 @@ export interface FacilityDetail {
   amenities: string[];
   courts: FacilityCourtSummary[];
 }
+
+export interface AvailabilitySlot {
+  startTime: string;
+  endTime: string;
+  price: number;
+  available: boolean;
+}
+
+export interface AvailabilityCourt {
+  id: string;
+  name: string;
+  type: CourtType;
+  indoor: boolean;
+  slots: AvailabilitySlot[];
+}
+
+export interface AvailabilityResponse {
+  date: string;
+  courts: AvailabilityCourt[];
+}
+
+export type BookingStatus = 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+
+export interface CreateBookingPayload {
+  courtId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface BookingFacilitySummary {
+  id: string;
+  name: string;
+  imageUrl: string;
+}
+
+export interface BookingCourtSummary {
+  id: string;
+  name: string;
+}
+
+export interface Booking {
+  id: string;
+  bookingReference: string;
+  status: BookingStatus;
+  facility: BookingFacilitySummary;
+  court: BookingCourtSummary;
+  date: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  serviceFee: number;
+  totalPrice: number;
+}
+
+export interface BookingsParam {
+  status?: 'UPCOMING' | 'PAST' | 'CANCELLED';
+}
