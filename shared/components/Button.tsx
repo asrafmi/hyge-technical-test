@@ -1,75 +1,95 @@
-import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/shared/constants/theme';
+import { PressableScale } from '@/shared/components/PressableScale';
+import { colors, radius, shadows, spacing, typography } from '@/shared/constants/theme';
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Size = 'md' | 'lg';
 
 interface ButtonProps {
   label: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: Variant;
+  size?: Size;
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  haptic?: boolean;
+  style?: StyleProp<ViewStyle>;
+  icon?: React.ReactNode;
 }
 
 export function Button({
   label,
   onPress,
   variant = 'primary',
+  size = 'lg',
   loading = false,
   disabled = false,
   style,
-  haptic = false,
+  icon,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
-  const handlePress = () => {
-    if (isDisabled) return;
-    if (haptic) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    }
-    onPress();
-  };
-
   return (
-    <Pressable
-      onPress={handlePress}
+    <PressableScale
+      onPress={onPress}
       disabled={isDisabled}
-      style={[styles.base, variantStyles[variant], isDisabled && styles.disabled, style]}
+      haptic="medium"
+      style={[
+        styles.base,
+        sizeStyles[size],
+        variantStyles[variant],
+        variant === 'primary' && !isDisabled && shadows.primary,
+        isDisabled && styles.disabled,
+        style,
+      ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'secondary' ? colors.primary : colors.primaryText} />
+        <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? colors.onPrimary : colors.primary} />
       ) : (
-        <Text style={[styles.label, variant === 'secondary' && styles.labelSecondary]}>{label}</Text>
+        <View style={styles.content}>
+          {icon}
+          <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
+        </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    height: 52,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  disabled: {
-    opacity: 0.5,
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primaryText,
+    ...typography.subheading,
   },
-  labelSecondary: {
-    color: colors.primary,
+  disabled: {
+    opacity: 0.45,
   },
 });
 
-const variantStyles: Record<NonNullable<ButtonProps['variant']>, ViewStyle> = {
+const sizeStyles: Record<Size, ViewStyle> = {
+  md: { height: 46 },
+  lg: { height: 56 },
+};
+
+const variantStyles: Record<Variant, ViewStyle> = {
   primary: { backgroundColor: colors.primary },
+  secondary: { backgroundColor: colors.surfaceAlt },
+  ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.danger },
-  secondary: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+};
+
+const labelStyles: Record<Variant, { color: string }> = {
+  primary: { color: colors.onPrimary },
+  secondary: { color: colors.text },
+  ghost: { color: colors.primary },
+  danger: { color: colors.onPrimary },
 };
