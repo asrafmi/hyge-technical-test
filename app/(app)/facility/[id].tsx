@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,10 +22,14 @@ export default function FacilityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { data: facility, isLoading, isError, error, refetch } = useFacilityDetailQuery(id);
+  const [selectedCourtId, setSelectedCourtId] = useState<string>();
 
   const startingPrice = facility?.courts.length
     ? Math.min(...facility.courts.map((court) => court.basePrice))
     : undefined;
+  const selectedCourt = facility?.courts.find((court) => court.id === selectedCourtId);
+  const footerPrice = selectedCourt?.basePrice ?? startingPrice;
+  const footerPriceLabel = footerPrice !== undefined ? formatCurrency(footerPrice) : '-';
 
   return (
     <View style={styles.container}>
@@ -118,7 +123,15 @@ export default function FacilityDetailScreen() {
               <Section title="Courts">
                 <View style={styles.courtsList}>
                   {facility.courts.map((court, index) => (
-                    <CourtRow key={court.id} court={court} index={index} />
+                    <CourtRow
+                      key={court.id}
+                      court={court}
+                      index={index}
+                      selected={court.id === selectedCourtId}
+                      onPress={() =>
+                        setSelectedCourtId((prev) => (prev === court.id ? undefined : court.id))
+                      }
+                    />
                   ))}
                 </View>
               </Section>
@@ -130,14 +143,18 @@ export default function FacilityDetailScreen() {
             style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}
           >
             <View style={styles.footerPrice}>
-              <Text style={styles.footerPriceLabel}>from</Text>
-              <Text style={styles.footerPriceValue}>
-                {startingPrice !== undefined ? formatCurrency(startingPrice) : '-'}
-              </Text>
+              <Text style={styles.footerPriceLabel}>{selectedCourt ? selectedCourt.name : 'from'}</Text>
+              <Text style={styles.footerPriceValue}>{footerPriceLabel}</Text>
             </View>
             <Button
               label="Book now"
-              onPress={() => router.push(`/(app)/facility/${facility.id}/book`)}
+              disabled={!selectedCourt}
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/facility/[id]/book',
+                  params: { id: facility.id, courtId: selectedCourt?.id },
+                })
+              }
               style={styles.footerButton}
             />
           </Animated.View>
@@ -156,26 +173,47 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function CourtRow({ court, index }: { court: FacilityCourtSummary; index: number }) {
+function CourtRow({
+  court,
+  index,
+  selected,
+  onPress,
+}: {
+  court: FacilityCourtSummary;
+  index: number;
+  selected: boolean;
+  onPress: () => void;
+}) {
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(300)} style={styles.courtRow}>
-      <View style={styles.courtIcon}>
-        <SportIcon sport={court.sport} size={18} color={colors.primary} />
-      </View>
-      <View style={styles.courtInfo}>
-        <Text style={styles.courtName}>{court.name}</Text>
-        <View style={styles.courtMetaRow}>
-          <Ionicons
-            name={court.indoor ? 'home-outline' : 'sunny-outline'}
-            size={12}
-            color={colors.textMuted}
-          />
-          <Text style={styles.courtMeta}>
-            {court.sport.charAt(0).toUpperCase() + court.sport.slice(1)} · {court.indoor ? 'Indoor' : 'Outdoor'}
-          </Text>
+    <Animated.View entering={FadeInDown.delay(index * 60).duration(300)}>
+      <PressableScale
+        style={[styles.courtRow, selected && styles.courtRowSelected]}
+        onPress={onPress}
+        scaleTo={0.98}
+      >
+        <View style={[styles.courtIcon, selected && styles.courtIconSelected]}>
+          <SportIcon sport={court.sport} size={18} color={selected ? colors.onPrimary : colors.primary} />
         </View>
-      </View>
-      <Text style={styles.courtPrice}>{formatCurrency(court.basePrice)}</Text>
+        <View style={styles.courtInfo}>
+          <Text style={styles.courtName}>{court.name}</Text>
+          <View style={styles.courtMetaRow}>
+            <Ionicons
+              name={court.indoor ? 'home-outline' : 'sunny-outline'}
+              size={12}
+              color={colors.textMuted}
+            />
+            <Text style={styles.courtMeta}>
+              {court.sport.charAt(0).toUpperCase() + court.sport.slice(1)} · {court.indoor ? 'Indoor' : 'Outdoor'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.courtPrice}>{formatCurrency(court.basePrice)}</Text>
+        <Ionicons
+          name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={20}
+          color={selected ? colors.primary : colors.borderStrong}
+        />
+      </PressableScale>
     </Animated.View>
   );
 }
@@ -304,6 +342,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  courtRowSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
   courtIcon: {
     width: 38,
     height: 38,
@@ -311,6 +353,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  courtIconSelected: {
+    backgroundColor: colors.primary,
   },
   courtInfo: {
     flex: 1,

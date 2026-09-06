@@ -22,11 +22,11 @@ import { formatCompactCurrency, formatDateParam } from '@/shared/utils/format';
 import type { AvailabilitySlot } from '@/services/api/types';
 
 export default function BookFacilityScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, courtId } = useLocalSearchParams<{ id: string; courtId?: string }>();
   const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(() => formatDateParam(new Date()));
-  const [selectedCourtId, setSelectedCourtId] = useState<string>();
+  const [selectedCourtId, setSelectedCourtId] = useState<string | undefined>(courtId);
   const [selectedSlots, setSelectedSlots] = useState<AvailabilitySlot[]>([]);
   const [sheetVisible, setSheetVisible] = useState(false);
 
