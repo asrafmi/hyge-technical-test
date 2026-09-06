@@ -2,7 +2,7 @@
 
 Mobile app for browsing sports facilities and booking courts. Built with Expo for the Hyge take home test (Software Engineer, App & Web Focused).
 
-This boilerplate currently covers onboarding and auth (register, login, secure token storage, protected routing). Facility browsing, availability, and bookings are built next on top of this foundation.
+Covers the full flow: onboarding, auth (register, login, secure token storage, protected routing), facility browsing with search and filters, facility detail, availability with a date picker and hourly slots, booking creation, and my bookings with upcoming and past tabs, detail view, and cancel.
 
 ## Tech stack
 
@@ -12,6 +12,7 @@ This boilerplate currently covers onboarding and auth (register, login, secure t
 - TanStack Query for all server state
 - Zustand for auth state only (token, current user)
 - React Hook Form and Zod for form handling and validation
+- Jest and React Native Testing Library for component tests
 
 ## Prerequisites
 
@@ -142,38 +143,71 @@ eas build:download --platform android --profile preview --output releases/courtl
 
 ### Option B: local Gradle build (no EAS account needed)
 
+This is the path actually used for this submission's committed APK.
+
 ```bash
-npx expo prebuild --platform android    # generates ./android if not already there
+npx expo prebuild --platform android --clean   # regenerates ./android from app.json and assets
+
 cd android
-./gradlew assembleRelease
+JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" \
+PATH="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home/bin:$PATH" \
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
 
-The unsigned or debug-signed APK lands at `android/app/build/outputs/apk/release/app-release.apk` (or `debug/app-debug.apk` for a debug build). Copy it into the repo:
+The `-PreactNativeArchitectures=arm64-v8a` flag is what keeps the APK small, see APK size below for why.
+
+`--clean` on prebuild is worth doing whenever `app.json` or `assets/` (icons, splash) changed since the `android/` folder was last generated, since the folder is gitignored and regenerated rather than diffed.
+
+The generated `android/app/build.gradle` signing config points `release` at the debug keystore by default (`signingConfigs.debug`), so `assembleRelease` already produces a signed, installable APK without any extra keystore setup, verify with:
+
+```bash
+$ANDROID_HOME/build-tools/<version>/apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk
+```
+
+Copy it into the repo:
 
 ```bash
 cp android/app/build/outputs/apk/release/app-release.apk ../releases/courtly-android.apk
 ```
 
-A release build needs a signing config (`android/app/build.gradle` plus a keystore) to install cleanly on devices with Play Protect, a debug build skips that and is fine for an internal take home submission.
+### APK size
+
+A default `assembleRelease` bundles all four CPU architectures (`arm64-v8a`, `armeabi-v7a`, `x86`, `x86_64`) into one APK, which lands around 100 to 110MB for this app, over GitHub's 100MB hard file size limit and too large to commit comfortably without Git LFS. The committed APK is built for `arm64-v8a` only instead (covers essentially all real Android phones from the last several years, plus most current emulator images), passed as a one off Gradle property rather than edited into `android/gradle.properties` directly, since that file lives inside the gitignored, regenerated `android/` folder and the override would be lost on the next `expo prebuild --clean`:
+
+```bash
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+This brings the APK down to about 45MB.
 
 ## Architecture
 
 Feature based structure, not a components or screens split by file type.
 
 ```
-/app              Expo Router routes, grouped into (auth) and (app)
+/app                          Expo Router routes
+  /(auth)                     login, register
+  /(app)/(tabs)               home, bookings
+  /(app)                      profile, account details (pushed, not tabs)
+  /(app)/facility/[id]        facility detail
+  /(app)/facility/[id]/book   availability and booking creation
+  /(app)/bookings/[id]        booking detail and cancel
+  onboarding.tsx              first launch carousel
 /features
-  /auth           login, register, auth schemas and hooks
+  /auth                       login, register, auth schemas and hooks
+  /facility                   facility list, filters, facility detail queries
+  /bookings                   availability, booking creation, my bookings queries and components
 /shared
-  /components     reusable UI primitives (Button, TextField)
-  /constants      theme tokens
-  /utils          error helpers
+  /components                 reusable UI primitives (Button, TextField, PressableScale, BottomSheet, Skeleton, SportIcon, ...)
+  /constants                  theme tokens
+  /hooks                      shared hooks (debounce, ...)
+  /utils                      error, format, and icon helpers
 /services
-  /api            typed API clients, one HTTP client per backend service
-/store            Zustand auth store
+  /api                        typed API clients, one file per resource plus the shared HTTP layer
+/store                        Zustand stores (auth, onboarding)
 ```
 
-Server state goes through TanStack Query exclusively. Client state (auth token, current user) goes through Zustand, kept minimal so server data never leaks into it.
+Server state goes through TanStack Query exclusively. Client state (auth token, current user, onboarding seen) goes through Zustand, kept minimal so server data never leaks into it.
 
 ### API client
 
@@ -182,7 +216,7 @@ The HTTP layer is split so a new backend service can be added without touching t
 - `services/api/http-client.ts`, exports `createHttpClient(config)`, a factory that builds one configured Axios instance (base URL, request interceptor for auth header injection, response interceptor that normalizes every error into a typed `ApiError`).
 - `services/api/http.ts`, exports `createHttpMethods(instance)`, wraps a given Axios instance with `get` / `post` / `put` / `patch` / `del` helpers.
 - `services/api/courtly-client.ts`, the only service specific file today. Instantiates `createHttpClient` with `EXPO_PUBLIC_COURTLY_API_URL` and exports `courtly`, the ready to use method set for the Courtly API.
-- `services/api/auth.ts`, calls `courtly.post(...)` for the two auth endpoints.
+- `services/api/auth.ts`, `facility.ts`, `bookings.ts`, one file per resource, each calling `courtly.get/post/del(...)` and returning typed responses defined in `services/api/types.ts`.
 
 Adding a second backend later means adding one more file like `courtly-client.ts` with its own base URL and auth wiring, not modifying the shared factory.
 
@@ -194,13 +228,35 @@ Expired or invalid tokens are handled centrally: when a request made with `{ aut
 
 `app/_layout.tsx` hydrates the auth store from `expo-secure-store` on launch, then renders either the `(auth)` or `(app)` route group behind `Stack.Protected`. There is no manual redirect logic scattered through screens, the guard on the stack does it.
 
-## Expo modules used so far
+### Booking flow
 
-- `expo-secure-store`, stores the JWT and the current user object. Chosen because token storage needs to be secure, not AsyncStorage, this is close to mandatory for the auth requirement.
-- `expo-haptics`, feedback on sign in and sign up submit. Small polish, cheap to add.
-- `expo-router`, file based navigation with typed routes and the `Stack.Protected` API for auth gated routing.
+`GET /v1/facilities/:id/availability?date=` returns slots per court, each carrying its own price and an `available` flag, so the UI shows real per hour pricing rather than a flat rate. `POST /v1/bookings` only accepts one hourly slot per call (`startTime` and `endTime` must span exactly one slot, e.g. `08:00` to `09:00`), it does not accept an arbitrary multi hour range. Booking more than one hour on the same court checks multiple slots (no requirement that they are back to back) and fires one `POST /v1/bookings` request per selected slot sequentially, `features/bookings/hooks/use-booking-mutation.ts` tracks which slots succeeded and which failed so a partial failure is surfaced accurately instead of silently dropped or falsely reported as a full success.
 
-More modules (`expo-image`, `expo-haptics` on booking actions, possibly `expo-calendar`) get added as the facility and booking features land, documented here as they're introduced per the brief.
+`GET /v1/bookings` returns `{ data, pagination }`, the list items only carry `totalPrice`, the full price breakdown (`price`, `serviceFee`, `totalPrice`) is only present on the single booking response from `GET /v1/bookings/:id`. The Bookings tab filters via `?status=UPCOMING|PAST|CANCELLED` server side rather than bucketing dates client side.
+
+## Testing
+
+```bash
+npm test          # run once
+npm run test:watch
+```
+
+Jest with `jest-expo` and React Native Testing Library. Coverage today is component level, targeting the shared UI primitives in `shared/components/__tests__/` (`Button`, `PressableScale`, `SportIcon`, `TextField`, `BottomSheet`, `Skeleton`, `Slider`), since those are reused across every screen and a regression there is silent and easy to miss otherwise.
+
+## Expo modules
+
+The brief asks for at least 3 Expo SDK modules beyond core React Native, chosen for a real feature rather than to hit a count. Six are integrated:
+
+- **`expo-secure-store`**, stores the JWT, the current user object, and the onboarding seen flag. Token storage needs to be secure rather than plain AsyncStorage, so this one is close to mandatory anyway given the auth requirement in the brief.
+- **`expo-image`**, renders every facility image (list cards, facility detail hero, booking cards). Better decode performance and disk caching than the core `Image` component, which matters because the facility list renders a network image per row and most `imageUrl` values point at Unsplash links that are frequently dead, `expo-image`'s `contentFit` and transition props make the gradient and icon fallback underneath read as intentional rather than a broken image.
+- **`expo-haptics`**, press feedback wired once through the shared `PressableScale` wrapper rather than sprinkled per screen, so every button, card, chip, and tab switch across the app gets consistent tactile feedback for free.
+- **`expo-font`**, loads Plus Jakarta Sans (`@expo-google-fonts/plus-jakarta-sans`) once at startup behind the splash screen, so the app has a single deliberate type family instead of the system default.
+- **`expo-linear-gradient`**, used for the onboarding image fade, the facility card image overlay so light image content stays legible under the rating badge and sport chips, and the facility and booking detail hero images.
+- **`expo-splash-screen`**, held manually until fonts and both Zustand stores (auth, onboarding) have hydrated from `expo-secure-store`, so the first frame the user sees is never unstyled or flashing default state.
+
+`expo-router` is also in use for file based navigation, typed routes, and the `Stack.Protected` API for auth gated routing, it is not counted toward the 3 module minimum since it is closer to core framework wiring than a feature integration, but it is worth naming since it shapes the whole app structure.
+
+`expo-calendar` was considered for adding a booked slot to the device calendar from the booking confirmation, it stayed optional per the brief's own framing and was not added, the core booking flow was the priority given the deadline.
 
 ## Known constraints
 
@@ -208,4 +264,4 @@ More modules (`expo-image`, `expo-haptics` on booking actions, possibly `expo-ca
 
 ## Android build status
 
-Not built yet. The internal Android build will be committed at `releases/courtly-android.apk` once the core flow is complete, no Expo Go links, QR codes, or screen recordings per the brief.
+Built at `releases/courtly-android.apk`, arm64-v8a only, about 45MB, signed and verified installable (`apksigner verify` passes with the v2 scheme). No Expo Go links, QR codes, or screen recordings, per the brief.
