@@ -30,6 +30,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Run tests
+        run: npm test -- --ci --coverage
+
       - name: Expo config sanity check
         run: npx expo-doctor
 
